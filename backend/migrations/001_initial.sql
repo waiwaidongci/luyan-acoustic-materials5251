@@ -85,10 +85,16 @@ CREATE TABLE decision_runs (
 	summary JSON NOT NULL,
 	result JSON NOT NULL,
 	error VARCHAR(600) NOT NULL,
+	source_fingerprint VARCHAR(64) NOT NULL DEFAULT '',
+	source_signature JSON NULL,
+	recalc_of_id INTEGER NULL,
+	recalc_seq INTEGER NOT NULL DEFAULT 0,
+	recalc_status VARCHAR(20) NOT NULL DEFAULT '',
 	created_at DATETIME NOT NULL,
 	PRIMARY KEY (id),
 	UNIQUE (name),
-	FOREIGN KEY(study_id) REFERENCES candidate_studies (id)
+	FOREIGN KEY(study_id) REFERENCES candidate_studies (id),
+	FOREIGN KEY(recalc_of_id) REFERENCES decision_runs (id)
 )
 
 ;

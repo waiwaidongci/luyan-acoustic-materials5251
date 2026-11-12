@@ -14,8 +14,36 @@ class RunSummary(RunInput):
     status:str
     summary:dict
     error:str
+    source_fingerprint:str=''
+    recalc_of_id:int|None=None
+    recalc_seq:int=0
+    recalc_status:str=''
     created_at:datetime
     model_config=ConfigDict(from_attributes=True)
 class RunOut(RunSummary):
     snapshot:dict
     result:dict
+class SourceChange(BaseModel):
+    model_config=ConfigDict(extra='allow')
+class StaleReport(BaseModel):
+    run_id:int
+    name:str
+    study_id:int
+    status:str
+    stale:bool
+    source_fingerprint:str
+    current_fingerprint:str
+    sample_changes:list[dict]
+    criterion_changes:list[dict]
+    affected_sample_ids:list[int]
+    recalc_of_id:int|None=None
+    recalc_seq:int=0
+    recalc_status:str=''
+    created_at:datetime
+    model_config=ConfigDict(from_attributes=True)
+class RecalcResult(BaseModel):
+    queued:list[dict]
+    skipped:list[dict]
+    up_to_date:list[dict]
+class BatchRecalcInput(BaseModel):
+    study_id:int|None=None

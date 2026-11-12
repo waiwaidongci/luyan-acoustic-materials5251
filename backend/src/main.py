@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from redis import Redis
 from src.config.database import Base,engine
+from src.config.schema_guard import ensure_run_columns
 from src.config.settings import SEED_DEMO,REDIS_URL
 from src import models
 from src.routes import auth,studies,samples,criteria,runs,notes,audit
@@ -13,6 +14,9 @@ from src.middlewares.rate_limit import RateLimitMiddleware
 @asynccontextmanager
 async def lifespan(app):
     Base.metadata.create_all(engine)
+    try:
+        ensure_run_columns(engine)
+    except Exception:logging.exception('schema guard failed; run migrations/002 manually')
     if SEED_DEMO:
         try:
             from scripts.seed_demo import seed

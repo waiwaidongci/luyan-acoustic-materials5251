@@ -27,6 +27,7 @@
 7. 09:30 查看全部40页情景留档，每页25次；每次保留5个权重、36份贴近度/平均名次及并列首位分摊。
 8. 09:40 提出“LY23湿热条件吸声复测”，把权衡中的取舍、复测条件与原始报告要求写进计划。余芦用admin审阅，说明采购另行审议。
 9. 10:00 季乔用viewer下载 `trial-note-<id>.csv`，含审批、方案、快照指纹、5项中心权重及36份摘要。新检测结果回资料库后需另建任务，旧结果不改写。
+10. 10:20 检测组修订LY23的吸声复测值。系统按源数据指纹把引用该试样的已完成权衡标为“源数据已过期”，列出受影响试样、字段与新旧值；林砚在权衡配置页点“按原偏好批量重算”，每项过期权衡按原中心权重、κ、seed与情景数生成一条重算版本（`recalc_of`指向原始任务）。重复点同一批修订不会新增任务；某条重算失败时可在原任务上重试，失败前后旧的已批准计划CSV都能正常下载。结果页新增“新旧权衡对照”页签，可比较两版名次、贴近度与首位份额变化。
 
 以上数值来自固定seed真实计算；seed只插入输入，不预置模型结果。
 
@@ -92,13 +93,24 @@ C_i = D_i− / (D_i+ + D_i−)
 
 SHA256覆盖算法版本、完整冻结快照、原始中心权重、κ、情景数和seed。固定软件与输入可完整复算，结果同时存数据库和 `/artifacts/run-<id>.json`。指纹包含数据库ID，重建库或改变来源标识不保证相同指纹。运行列表只返回轻量摘要；详情按需读取完整情景，避免轮询反复搬运大JSON。
 
+## 源数据修订与过期权衡
+
+每份任务在冻结时另存**源数据指纹与签名**（候选试样五项测量值、研究指标口径、候选集合的规范化哈希，测量值统一按双精度数值比较，不受JSON文本存储的 `1`/`1.0` 差异影响）。共享资料库或指标口径被修订后，读取任务时实时比对当前源数据：
+
+- `GET /runs/stale`（可按 `study_id` 过滤）返回每项已完成/失败任务的过期状态、受影响试样与指标清单（含字段级新旧值、`affected_sample_ids`）、当前指纹与冻结指纹。无指纹的历史任务不判过期。
+- 重算沿用原始任务的中心权重、κ、seed、情景数与研究，只替换为当前快照，生成版本链上的新任务（`recalc_of_id` 指向原始任务、`recalc_seq` 递增）。原始任务的结果、快照与已批准试样计划**永不改写**，新旧版本可在结果页“新旧权衡对照”页签逐项比较名次与贴近度变化。
+- 幂等：同一修订对同一原始任务只存在一条活动/最新重算；对已是最新的链再次调用直接返回该版本，不新增任务。`POST /runs/{id}/recalculate` 为单项，`POST /runs/recalculate` 为批量（返回 `queued/skipped/up_to_date` 三类，活动任务达上限的条目进入 `skipped` 而非整体失败）。
+- 失败的重算保留失败原因，`POST /runs/{id}/retry` 在**同一任务行**上重置重试，不产生新任务；重算失败不影响旧任务与已批准计划，失败前后 `trial-note` 导出均正常。
+- 仅 admin/analyst 可发起重算与重试，viewer 只读（403）。审计中间件自动记录这些写操作。
+- 升级既有数据库：启动时的幂等 schema guard 会补齐 `source_fingerprint/source_signature/recalc_of_id/recalc_seq/recalc_status` 五列，也可手动执行 `migrations/002_run_recalculation.sql`。
+
 ## 工程结构与开发
 
 ```text
 backend/src/{models,schemas,services,controllers,routes}  五个独立业务链
-backend/src/services/{normalization,topsis,weight_sensitivity}.py
+backend/src/services/{normalization,topsis,weight_sensitivity,staleness_service}.py
 backend/src/{config,constants,middlewares,utils}/
-backend/{scripts/seed_demo.py,migrations/001_initial.sql}
+backend/{scripts/seed_demo.py,migrations/001_initial.sql,migrations/002_run_recalculation.sql}
 frontend/src/{api,stores,types,constants,components/common,hooks,pages,router,utils}/
 ```
 

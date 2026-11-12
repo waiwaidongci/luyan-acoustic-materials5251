@@ -17,4 +17,10 @@ class DecisionRun(Base):
     summary:Mapped[dict]=mapped_column(JSON,default=dict)
     result:Mapped[dict]=mapped_column(JSON,default=dict)
     error:Mapped[str]=mapped_column(String(600),default='')
+    # Source-data provenance and recalculation lineage (migration 002).
+    source_fingerprint:Mapped[str]=mapped_column(String(64),default='')
+    source_signature:Mapped[dict]=mapped_column(JSON,default=dict)
+    recalc_of_id:Mapped[int|None]=mapped_column(ForeignKey('decision_runs.id'),nullable=True,default=None)
+    recalc_seq:Mapped[int]=mapped_column(default=0)
+    recalc_status:Mapped[str]=mapped_column(String(20),default='')
     created_at:Mapped[datetime]=mapped_column(DateTime,default=datetime.utcnow)
