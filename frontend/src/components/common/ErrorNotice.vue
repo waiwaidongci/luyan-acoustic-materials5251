@@ -1,0 +1,1 @@
+<script setup lang="ts">defineProps<{error:string}>()</script><template><div v-if="error" class="error-notice" role="alert"><b>请核对后重试</b><span>{{error}}</span></div></template>

@@ -1,0 +1,2 @@
+<script setup lang="ts">defineProps<{no:string;title:string;sub:string}>()</script>
+<template><div class="page-heading"><p class="eyebrow">MATERIAL STUDIES / {{no}}</p><h1>{{title}}</h1><p>{{sub}}</p></div></template>
